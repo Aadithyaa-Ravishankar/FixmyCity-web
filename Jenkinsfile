@@ -16,9 +16,15 @@ pipeline {
                     string(credentialsId: "VITE_SUPABASE_ANON_KEY", variable: "SUPABASE_KEY")
                 ]) {
                     sh """
+                    export NVM_DIR="/home/ec2-user/.nvm"
+                    [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
+                    nvm use 20
+
                     export VITE_SUPABASE_URL=\$SUPABASE_URL
                     export VITE_SUPABASE_ANON_KEY=\$SUPABASE_KEY
 
+                    node -v
+                    npm -v
                     npm install
                     npm run build
                     """
@@ -37,6 +43,7 @@ pipeline {
                     --build-arg VITE_SUPABASE_URL=\$SUPABASE_URL \
                     --build-arg VITE_SUPABASE_ANON_KEY=\$SUPABASE_KEY \
                     -t fixmycity:\${IMAGE_TAG} .
+
                     docker tag fixmycity:\${IMAGE_TAG} \${ECR_URI}:latest
                     docker tag fixmycity:\${IMAGE_TAG} \${ECR_URI}:\${IMAGE_TAG}
                     """
@@ -61,9 +68,7 @@ pipeline {
                 sshagent(["app-server-key"]) {
                     sh """
                     ssh -o StrictHostKeyChecking=no ec2-user@\${APP_SERVER_IP} << EOF
-                    aws ecr get-login-password --region ${AWS_REGION} \\
-                    | docker login --username AWS --password-stdin ${ECR_URI}
-
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URI}
                     docker pull ${ECR_URI}:latest
                     docker stop fixmycity 2>/dev/null || true
                     docker rm fixmycity 2>/dev/null || true
@@ -77,8 +82,14 @@ EOF
     }
 
     post {
-        success { echo "Live at http://${APP_SERVER_IP}" }
-        failure { echo "Build failed — check stage logs above." }
-        always { cleanWs() }
+        success {
+            echo "Live at http://${APP_SERVER_IP}"
+        }
+        failure {
+            echo "Build failed — check stage logs above."
+        }
+        always {
+            cleanWs()
+        }
     }
 }
