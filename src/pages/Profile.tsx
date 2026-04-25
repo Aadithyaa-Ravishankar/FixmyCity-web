@@ -103,11 +103,10 @@ export default function Profile() {
             <div className="grid md:grid-cols-3 gap-6">
                {/* Identity Information */}
                <div className="md:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                 <h2 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Account Identity</h2>
+                 <h2 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Account Details</h2>
                  
                  <div className="space-y-1">
                    {user?.phone && <InfoRow icon={Phone} label="Phone Number" value={user.phone} />}
-                   <InfoRow icon={Hash} label="System UUID" value={user?.id || 'Unknown'} />
                    <InfoRow icon={Clock} label="Account Created" value={user?.created_at ? new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown'} />
                    <InfoRow icon={LogIn} label="Last Authenticated" value={user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Unknown'} />
                  </div>
@@ -116,14 +115,14 @@ export default function Profile() {
                {/* System Actions */}
                <div className="md:col-span-1 space-y-4">
                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-full flex flex-col">
-                   <h2 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">System Actions</h2>
+                   <h2 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Settings</h2>
                    
                    <button 
                      onClick={loadStats}
                      className="w-full flex items-center p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors mb-3"
                    >
                      <RefreshCw className="text-slate-600 mr-3" size={16} />
-                     <span className="text-sm font-semibold text-slate-700">Refresh Analytics</span>
+                     <span className="text-sm font-semibold text-slate-700">Refresh Stats</span>
                    </button>
                    
                    <button 
@@ -137,7 +136,7 @@ export default function Profile() {
                      className="w-full flex items-center p-3 bg-white hover:bg-red-50 border border-red-200 rounded-lg transition-colors mt-auto"
                    >
                      <LogOut className="text-red-600 mr-3" size={16} />
-                     <span className="text-sm font-semibold text-red-700">Terminate Session</span>
+                     <span className="text-sm font-semibold text-red-700">Log Out</span>
                    </button>
                  </div>
                </div>

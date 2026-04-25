@@ -32,11 +32,16 @@ export default function ReportIssue() {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     fetchLocation();
+    return () => {
+      stopCamera();
+    };
   }, []);
 
   const fetchLocation = async () => {
@@ -53,15 +58,48 @@ export default function ReportIssue() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setMediaFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMediaPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setIsCameraActive(true);
+      }
+    } catch (err) {
+      toast.error('Camera access denied or unavailable.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setMediaPreview(dataUrl);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], "evidence.jpg", { type: "image/jpeg" });
+            setMediaFile(file);
+          }
+        }, 'image/jpeg', 0.8);
+        
+        stopCamera();
+      }
     }
   };
 
@@ -91,6 +129,7 @@ export default function ReportIssue() {
     if (!description) return toast.error('Please provide a descriptive log.');
     if (!position) return toast.error('Geolocation data is required.');
     if (!user) return toast.error('Session expired. Please re-authenticate.');
+    if (!mediaFile) return toast.error('Visual evidence is mandatory.');
 
     setIsSubmitting(true);
     try {
@@ -138,9 +177,9 @@ export default function ReportIssue() {
          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100 mb-6">
             <CheckCircle size={32} className="text-emerald-600" />
          </div>
-         <h1 className="text-2xl font-bold text-slate-900 mb-2">Record Successfully Submitted</h1>
+         <h1 className="text-2xl font-bold text-slate-900 mb-2">Report Submitted Successfully</h1>
          <p className="text-slate-500 text-sm">
-            The civic issue has been logged into the regional database for administrative review.
+            Your report has been received and will be reviewed soon.
          </p>
       </div>
     );
@@ -156,8 +195,8 @@ export default function ReportIssue() {
              <ArrowLeft size={16} />
            </button>
            <div>
-             <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-tight">Lodge Civic Issue</h1>
-             <p className="text-slate-500 text-sm mt-0.5">Enter details to report a community infraction.</p>
+             <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-tight">Report an Issue</h1>
+             <p className="text-slate-500 text-sm mt-0.5">Enter details about the issue.</p>
            </div>
         </div>
 
@@ -166,12 +205,12 @@ export default function ReportIssue() {
           {/* Spatial Data */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Spatial Data Logging</h2>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Your Location</h2>
               <button 
                 type="button" onClick={fetchLocation}
                 className="text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors px-3 py-1.5 rounded"
               >
-                Refresh Coordinate
+                Update Location
               </button>
             </div>
             
@@ -181,7 +220,7 @@ export default function ReportIssue() {
               </div>
               <div className="flex-1 min-w-0">
                 {isLocating ? (
-                  <p className="text-sm font-medium text-slate-500 animate-pulse">Querying satellite positioning...</p>
+                  <p className="text-sm font-medium text-slate-500 animate-pulse">Finding your location...</p>
                 ) : position ? (
                   <>
                     <p className="text-sm font-semibold text-slate-800 truncate leading-snug">{address}</p>
@@ -190,19 +229,25 @@ export default function ReportIssue() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-sm font-medium text-red-600">Spatial data stream severed. Refresh required.</p>
+                  <p className="text-sm font-medium text-red-600">Could not find your location. Please update.</p>
                 )}
               </div>
             </div>
           </div>
 
+          <div className="flex justify-center">
+             <button type="button" className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 rounded-lg shadow-md hover:shadow-lg transition-all flex justify-center items-center">
+               <span className="mr-2">✨</span> Make complaint with AI
+             </button>
+          </div>
+
           {/* Issue Data */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-100 pb-3">Issue Information</h2>
+            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-100 pb-3">Issue Details</h2>
             
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Category Classification</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -213,7 +258,7 @@ export default function ReportIssue() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Subject Header</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Title</label>
                 <input
                   type="text"
                   value={title}
@@ -224,11 +269,11 @@ export default function ReportIssue() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Detailed Report</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Provide precise contextual data for municipal administrative teams..."
+                  placeholder="Describe the issue in detail..."
                   rows={4}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 text-sm placeholder-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
                 />
@@ -239,45 +284,42 @@ export default function ReportIssue() {
           {/* Evidence */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Visual Evidence Log</h2>
-              <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase tracking-wider">Optional Segment</span>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Add a Photo</h2>
+              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded uppercase tracking-wider">Mandatory Segment</span>
             </div>
             
             {mediaPreview ? (
               <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 h-[300px] flex justify-center group">
-                {mediaFile?.type.startsWith('video/') ? (
-                  <video src={mediaPreview} controls className="w-full h-full object-contain" />
-                ) : (
-                  <img src={mediaPreview} alt="Evidence Artifact" className="w-full h-full object-contain" />
-                )}
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button
-                     type="button"
-                     onClick={() => { setMediaFile(null); setMediaPreview(null); }}
-                     className="bg-white shadow-sm border border-slate-200 text-red-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-red-50 transition-colors"
-                   >
-                     Discard Asset
-                   </button>
-                </div>
+                 <img src={mediaPreview} alt="Evidence Artifact" className="w-full h-full object-contain" />
+                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={() => { setMediaFile(null); setMediaPreview(null); }}
+                      className="bg-white shadow-sm border border-slate-200 text-red-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-red-50 transition-colors"
+                    >
+                      Remove Photo
+                    </button>
+                 </div>
+              </div>
+            ) : isCameraActive ? (
+              <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-black h-[300px] flex justify-center group flex-col items-center">
+                 <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                 <canvas ref={canvasRef} className="hidden" />
+                 <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-4">
+                    <button type="button" onClick={capturePhoto} className="w-14 h-14 bg-white rounded-full border-4 border-slate-300 shadow-lg hover:scale-105 transition-transform"></button>
+                    <button type="button" onClick={stopCamera} className="absolute right-4 bottom-3 bg-red-600/80 text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-sm hover:bg-red-600 transition-colors">Cancel</button>
+                 </div>
               </div>
             ) : (
               <div 
-                onClick={() => fileInputRef.current?.click()}
+                onClick={startCamera}
                 className="w-full border border-dashed border-slate-300 rounded-lg p-12 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 <div className="w-12 h-12 bg-white border border-slate-200 shadow-sm rounded-lg flex items-center justify-center mb-3">
                   <Camera size={20} className="text-slate-500" />
                 </div>
-                <p className="text-sm font-semibold text-slate-700">Attach Documentation File</p>
-                <p className="text-xs text-slate-400 mt-1">Accepts standard image/video datasets</p>
-                
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*,video/*" 
-                  className="hidden" 
-                />
+                <p className="text-sm font-semibold text-slate-700">Take a Photo</p>
+                <p className="text-xs text-slate-400 mt-1">Live camera feed only</p>
               </div>
             )}
           </div>
@@ -294,7 +336,7 @@ export default function ReportIssue() {
               ) : (
                 <>
                   <Send size={16} className="mr-2" />
-                  Transmit Issue Record
+                  Submit Report
                 </>
               )}
             </button>

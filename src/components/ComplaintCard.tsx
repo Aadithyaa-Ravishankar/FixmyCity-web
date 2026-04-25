@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
-import { getAddressFromCoordinates } from '../services/location';
+import { getAddressFromCoordinates, getCurrentLocation, calculateDistance } from '../services/location';
 import { ThumbsUp, ThumbsDown, MessageSquare, MapPin, AlertTriangle, Calendar, Award } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import SeverityRatingDialog from './SeverityRatingDialog';
@@ -91,9 +91,29 @@ export default function ComplaintCard({ complaint, distance }: { complaint: Comp
     return () => { isMounted = false; };
   }, [complaint, user]);
 
+  const checkGeofence = async () => {
+    if (!complaint.location_lat || !complaint.location_long) return true;
+    try {
+      const pos = await getCurrentLocation({ timeout: 5000 });
+      const dist = calculateDistance(pos.latitude, pos.longitude, complaint.location_lat, complaint.location_long);
+      if (dist > 0.1) {
+        toast.error('You must be within 100 meters of the issue to perform this action.');
+        return false;
+      }
+      return true;
+    } catch (e: any) {
+      toast.error('Could not verify your location constraint: ' + e.message);
+      return false;
+    }
+  };
+
   const handleLike = async () => {
     if (!user) return;
     setIsLoading(true);
+    if (!(await checkGeofence())) {
+      setIsLoading(false);
+      return;
+    }
     try {
       if (userLiked) {
         await supabase.from('verification').delete().eq('user_id', user.id).eq('complaint_id', complaint.complaint_id).eq('verified_true', true);
@@ -122,6 +142,10 @@ export default function ComplaintCard({ complaint, distance }: { complaint: Comp
   const handleDislike = async () => {
     if (!user) return;
     setIsLoading(true);
+    if (!(await checkGeofence())) {
+      setIsLoading(false);
+      return;
+    }
     try {
       if (userDisliked) {
         await supabase.from('verification').delete().eq('user_id', user.id).eq('complaint_id', complaint.complaint_id).eq('verified_false', true);
@@ -198,7 +222,7 @@ export default function ComplaintCard({ complaint, distance }: { complaint: Comp
       </div>
 
       <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug">{complaint.title || 'Untitled Issue'}</h3>
+        <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug">{complaint.title}</h3>
         <p className="text-slate-700 text-sm leading-relaxed">{complaint.description || 'No description provided.'}</p>
       </div>
       
@@ -240,7 +264,9 @@ export default function ComplaintCard({ complaint, distance }: { complaint: Comp
       {avgSeverity !== null && (
         <div 
           className="flex items-center space-x-3 mb-5 p-3 rounded-lg bg-orange-50/50 border border-orange-100 cursor-pointer hover:bg-orange-50 transition-colors"
-          onClick={() => userLiked && setShowSeverityDialog(true)}
+          onClick={async () => {
+            if (userLiked && await checkGeofence()) setShowSeverityDialog(true);
+          }}
           title="Community Severity Rating"
         >
           <AlertTriangle size={16} className="text-orange-500 shrink-0" />
@@ -289,7 +315,9 @@ export default function ComplaintCard({ complaint, distance }: { complaint: Comp
         <div className="flex items-center space-x-2">
           {userLiked && (
             <button
-               onClick={() => setShowSeverityDialog(true)}
+               onClick={async () => {
+                 if (await checkGeofence()) setShowSeverityDialog(true);
+               }}
                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${
                  userSeverity 
                    ? 'bg-orange-50 text-orange-700 border-orange-200' 

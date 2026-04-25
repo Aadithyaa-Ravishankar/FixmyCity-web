@@ -23,21 +23,21 @@ export default function Login() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      toast.error('Standard authorization requires an email vector.');
+      toast.error('Email is required to log in.');
       return;
     }
     if (isSignup && !name) {
-      toast.error('Identity records require a full legal string.');
+      toast.error('Full name is required to sign up.');
       return;
     }
 
     setIsLoading(true);
     try {
       const result = await sendOTP(email, isSignup ? name : undefined);
-      toast.success(`Authentication token delivered.`);
+      toast.success(`Code sent to your email.`);
       navigate('/verify-otp', { state: { email, isCustom: (result as any)?.isCustom } });
     } catch (error: any) {
-      toast.error(`Authentication Handshake Failed: ${error.message}`);
+      toast.error(`Login Failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -52,9 +52,9 @@ export default function Login() {
           <div className="w-16 h-16 bg-white border border-slate-200 shadow-sm rounded-2xl flex items-center justify-center mb-5 shrink-0">
             <Building2 size={32} className="text-slate-900" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">FixmyCity Portal</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">FixmyCity</h1>
           <p className="text-slate-500 text-sm mt-1">
-            {isSignup ? "Establish your local identity network." : "Civic authorization required."}
+            {isSignup ? "Create your account." : "Log in to your account."}
           </p>
         </div>
 
@@ -67,20 +67,20 @@ export default function Login() {
               className={`flex-1 py-2 rounded-md text-sm font-semibold transition-colors ${!isSignup ? 'bg-white shadow border border-slate-200/50 text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
               onClick={() => setIsSignup(false)} type="button"
             >
-              System Login
+              Log In
             </button>
             <button
               className={`flex-1 py-2 rounded-md text-sm font-semibold transition-colors ${isSignup ? 'bg-white shadow border border-slate-200/50 text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
               onClick={() => setIsSignup(true)} type="button"
             >
-              Account Registration
+              Sign Up
             </button>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
             {isSignup && (
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Legal Identity</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <UserIcon size={16} className="text-slate-400" />
@@ -96,7 +96,7 @@ export default function Login() {
             )}
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Secure Email Address</label>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail size={16} className="text-slate-400" />
@@ -111,7 +111,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Password Configuration</label>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Password (Optional)</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock size={16} className="text-slate-400" />
@@ -119,7 +119,7 @@ export default function Login() {
                 <input
                   type="password"
                   className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400"
-                  placeholder="Optional vault key"
+                  placeholder="Optional password"
                   value={password} onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
@@ -132,7 +132,7 @@ export default function Login() {
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-slate-600 border-t-white rounded-full animate-spin" />
               ) : (
-                isSignup ? 'Initialize Account' : 'Authenticate Session'
+                isSignup ? 'Sign Up' : 'Log In'
               )}
             </button>
           </form>
@@ -140,7 +140,7 @@ export default function Login() {
         
         <div className="mt-8 flex items-center justify-center space-x-2 text-slate-400">
            <ShieldCheck size={14} />
-           <p className="text-[11px] font-semibold uppercase tracking-wider">Secured via Supabase Infrastructure</p>
+           <p className="text-[11px] font-semibold uppercase tracking-wider">Secured by Supabase</p>
         </div>
       </div>
     </div>

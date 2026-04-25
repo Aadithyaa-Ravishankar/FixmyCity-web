@@ -15,6 +15,7 @@ export default function Feed() {
   const [searchQuery, setSearchQuery] = useState('');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isUsingCache, setIsUsingCache] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   
   // Distance filter state
   const [distanceFilter, setDistanceFilter] = useState<number | null>(1000); // meters
@@ -130,8 +131,17 @@ export default function Feed() {
         const dKm = calculateDistance(userPos.latitude, userPos.longitude, c.location_lat, c.location_long);
         return (dKm * 1000) <= distanceFilter;
       });
+      
+      if (filtered.length === 0 && distanceFilter === 1000 && !initialCheckDone && complaints.length > 0) {
+        setDistanceFilter(null);
+        setInitialCheckDone(true);
+        return; // will re-run effect because distanceFilter changed
+      }
     }
 
+    if (!initialCheckDone && complaints.length > 0) {
+      setInitialCheckDone(true);
+    }
     setFilteredComplaints(filtered);
   };
 
@@ -145,7 +155,7 @@ export default function Feed() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-tight">Civic Issues Feed</h1>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-tight">City Issues</h1>
               <div className="flex items-center text-sm font-medium mt-1">
                 {isLocating ? (
                   <span className="flex items-center text-slate-500">
@@ -246,13 +256,13 @@ export default function Feed() {
               </div>
               <h3 className="text-lg font-semibold text-slate-800 mb-1">No Data Available</h3>
               <p className="text-slate-500 text-sm max-w-sm">
-                No civic issues found matching the current filters. Modify your search or location scope.
+                No reports found matching the current filters. Try changing your search or location.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="col-span-full mb-2">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{filteredComplaints.length} Records Found</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{filteredComplaints.length} Reports Found</p>
               </div>
               {filteredComplaints.map((complaint) => {
                 const dKm = userPos && complaint.location_lat 

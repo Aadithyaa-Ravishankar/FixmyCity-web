@@ -8,6 +8,7 @@ import VerifyOTP from './pages/VerifyOTP';
 import Feed from './pages/Feed';
 import ReportIssue from './pages/ReportIssue';
 import Profile from './pages/Profile';
+import TrackStatus from './pages/TrackStatus';
 
 export default function App() {
   const { session, isLoading } = useAuth();
@@ -32,6 +33,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/home" element={<Feed />} />
           <Route path="/report" element={<ReportIssue />} />
+          <Route path="/track" element={<TrackStatus />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Route>

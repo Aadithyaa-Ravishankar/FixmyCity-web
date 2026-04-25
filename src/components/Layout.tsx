@@ -1,14 +1,35 @@
-import React from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, User, MapPin, Building2, Bell } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Home, PlusCircle, User, MapPin, Building2, Bell, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUpdates = async () => {
+      const { data } = await supabase
+        .from('complaints')
+        .select('complaint_id, title, complaint_status, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      if (data) setRecentUpdates(data);
+    };
+    fetchUpdates();
+  }, [user]);
 
   const navItems = [
     { path: '/home', icon: Home, label: 'Feed' },
     { path: '/report', icon: PlusCircle, label: 'Report' },
+    { path: '/track', icon: Activity, label: 'Track Status' },
     { path: '/profile', icon: User, label: 'Profile' },
   ];
 
@@ -78,11 +99,75 @@ export default function Layout() {
       <div className="flex-1 flex flex-col relative w-full h-screen overflow-hidden">
         {/* Top Header - Desktop Only */}
         <header className="hidden md:flex h-20 items-center justify-end px-8 z-20">
-           <div className="flex items-center space-x-6">
-             <button className="relative p-2.5 bg-white rounded-full text-slate-500 hover:text-primary shadow-sm hover:shadow-md transition-all border border-slate-100 hover:scale-105">
+           <div className="flex items-center space-x-6 relative">
+             <button 
+               onClick={() => setShowNotifications(!showNotifications)}
+               className="relative p-2.5 bg-white rounded-full text-slate-500 hover:text-primary shadow-sm hover:shadow-md transition-all border border-slate-100 hover:scale-105"
+             >
                 <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                {recentUpdates.length > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
              </button>
+             
+             {showNotifications && (
+               <div className="absolute top-14 right-0 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
+                 <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                   <h3 className="text-sm font-bold text-slate-800">Recent Status Updates</h3>
+                   <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600">&times;</button>
+                 </div>
+                 <div className="max-h-64 overflow-y-auto">
+                   {recentUpdates.length === 0 ? (
+                     <div className="p-4 text-center text-sm text-slate-500">No recent updates</div>
+                   ) : (
+                     recentUpdates.map(update => (
+                       <div key={update.complaint_id} className="p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer" onClick={() => { setShowNotifications(false); navigate('/track'); }}>
+                         <p className="text-xs font-semibold text-slate-900 line-clamp-1">{update.title}</p>
+                         <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-wider">{update.complaint_status.replace('_', ' ')}</p>
+                       </div>
+                     ))
+                   )}
+                 </div>
+               </div>
+             )}
+           </div>
+        </header>
+
+        {/* Mobile Header */}
+        <header className="md:hidden flex h-16 items-center justify-between px-4 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/50 sticky top-0">
+           <div className="flex items-center space-x-2">
+             <div className="w-8 h-8 bg-gradient-to-tr from-primary to-primary-light rounded-lg flex items-center justify-center shadow-sm">
+               <Building2 className="text-white" size={16} />
+             </div>
+             <h1 className="text-lg font-bold text-slate-900">FixmyCity</h1>
+           </div>
+           <div className="relative">
+             <button 
+               onClick={() => setShowNotifications(!showNotifications)}
+               className="relative p-2 bg-slate-50 rounded-full text-slate-500 hover:text-primary transition-all border border-slate-100"
+             >
+                <Bell size={20} />
+                {recentUpdates.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
+             </button>
+             
+             {showNotifications && (
+               <div className="fixed top-16 right-4 left-4 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+                 <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                   <h3 className="text-sm font-bold text-slate-800">Recent Status Updates</h3>
+                   <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600">&times;</button>
+                 </div>
+                 <div className="max-h-64 overflow-y-auto">
+                   {recentUpdates.length === 0 ? (
+                     <div className="p-4 text-center text-sm text-slate-500">No recent updates</div>
+                   ) : (
+                     recentUpdates.map(update => (
+                       <div key={update.complaint_id} className="p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer" onClick={() => { setShowNotifications(false); navigate('/track'); }}>
+                         <p className="text-xs font-semibold text-slate-900 line-clamp-1">{update.title}</p>
+                         <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-wider">{update.complaint_status.replace('_', ' ')}</p>
+                       </div>
+                     ))
+                   )}
+                 </div>
+               </div>
+             )}
            </div>
         </header>
 
