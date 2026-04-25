@@ -18,12 +18,12 @@ pipeline {
                     sh '''
                     bash -lc "
                     export NVM_DIR=/home/ec2-user/.nvm
-                    source \$NVM_DIR/nvm.sh
+                    source \\$NVM_DIR/nvm.sh
                     nvm use 20
-
+        
                     export VITE_SUPABASE_URL=$SUPABASE_URL
                     export VITE_SUPABASE_ANON_KEY=$SUPABASE_KEY
-
+        
                     node -v
                     npm -v
                     npm install
