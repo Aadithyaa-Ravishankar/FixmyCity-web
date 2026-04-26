@@ -35,9 +35,10 @@ export default function Feed() {
       setUserPos(cached.position);
       setUserAddress(cached.address);
       setIsUsingCache(true);
+      fetchLocationAndData();
+    } else {
+      fetchComplaints();
     }
-
-    fetchLocationAndData();
   }, []);
 
   useEffect(() => {
@@ -242,6 +243,22 @@ export default function Feed() {
             </div>
           )}
         </div>
+
+        {/* Location Grant Banner */}
+        {!userPos && !locationError && !isLocating && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center text-sm font-semibold text-blue-800">
+              <MapPin size={18} className="mr-2 text-blue-600 shrink-0" />
+              <span>Enable location services to automatically see nearby civic issues.</span>
+            </div>
+            <button 
+              onClick={fetchLocationAndData}
+              className="bg-blue-600 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors shrink-0 shadow-sm"
+            >
+              Grant Access
+            </button>
+          </div>
+        )}
 
         {/* Content Area */}
         <div className="w-full">

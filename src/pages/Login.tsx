@@ -8,7 +8,6 @@ import { useAuth } from '../context/AuthContext';
 export default function Login() {
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -110,20 +109,7 @@ export default function Login() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Password (Optional)</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock size={16} className="text-slate-400" />
-                </div>
-                <input
-                  type="password"
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400"
-                  placeholder="Optional password"
-                  value={password} onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
+
 
             <button
               type="submit" disabled={isLoading}

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentLocation, getAddressFromCoordinates, Position } from '../services/location';
+import { getCurrentLocation, getAddressFromCoordinates, Position, getCachedLocation } from '../services/location';
 import { toast } from 'react-hot-toast';
 import { MapPin, Image as ImageIcon, Video, Camera, ArrowLeft, Send, CheckCircle } from 'lucide-react';
 
@@ -38,7 +38,12 @@ export default function ReportIssue() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    fetchLocation();
+    const cached = getCachedLocation();
+    if (cached.position) {
+      setPosition(cached.position);
+      setAddress(cached.address);
+    }
+    
     return () => {
       stopCamera();
     };
@@ -229,7 +234,10 @@ export default function ReportIssue() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-sm font-medium text-red-600">Could not find your location. Please update.</p>
+                  <div>
+                     <p className="text-sm font-medium text-slate-600 mb-2">Location is required to report an issue.</p>
+                     <button type="button" onClick={fetchLocation} className="text-xs font-bold bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition-colors shadow-sm">Grant Location Access</button>
+                  </div>
                 )}
               </div>
             </div>
