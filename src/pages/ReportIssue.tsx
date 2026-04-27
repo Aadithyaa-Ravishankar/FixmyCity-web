@@ -69,12 +69,18 @@ export default function ReportIssue() {
 
   const startCamera = async () => {
     try {
+      // Show modal first so videoRef is mounted
+      setIsCameraActive(true);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setIsCameraActive(true);
-      }
+      
+      // Allow React a tick to mount the modal DOM
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 50);
     } catch (err) {
+      setIsCameraActive(false);
       toast.error('Camera access denied or unavailable.');
     }
   };
@@ -131,7 +137,11 @@ export default function ReportIssue() {
             toast.success('AI Auto-Fill Complete! ✨');
           }).catch((err) => {
             console.error(err);
-            toast.error('AI Analysis failed. Please fill manually.');
+            if (err.message.includes('RATE_LIMIT_EXCEEDED')) {
+              toast.error('AI Quota Exceeded (429). The provided API key has run out of requests. Please fill manually.');
+            } else {
+              toast.error('AI Analysis failed. Please fill manually.');
+            }
           }).finally(() => {
             setIsAnalyzing(false);
             setIsAiMode(false);
@@ -355,18 +365,10 @@ export default function ReportIssue() {
                  )}
               </div>
             ) : isCameraActive ? (
-              <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-black h-[300px] flex justify-center group flex-col items-center">
-                 <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                 <canvas ref={canvasRef} className="hidden" />
-                 {isAiMode && (
-                   <div className="absolute top-4 bg-purple-600/90 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg backdrop-blur flex items-center">
-                     <Sparkles size={14} className="mr-1.5" /> AI Camera Mode
-                   </div>
-                 )}
-                 <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-4">
-                    <button type="button" onClick={capturePhoto} className="w-14 h-14 bg-white rounded-full border-4 border-slate-300 shadow-lg hover:scale-105 transition-transform"></button>
-                    <button type="button" onClick={stopCamera} className="absolute right-4 bottom-3 bg-red-600/80 text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-sm hover:bg-red-600 transition-colors">Cancel</button>
-                 </div>
+              <div className="w-full border border-dashed border-primary/50 rounded-lg p-12 flex flex-col items-center justify-center bg-primary/5 animate-pulse">
+                <Camera size={24} className="text-primary mb-3" />
+                <p className="text-sm font-semibold text-primary">Camera is active</p>
+                <p className="text-xs text-primary/70 mt-1">Please use the popup window to capture</p>
               </div>
             ) : (
               <div 
@@ -402,6 +404,44 @@ export default function ReportIssue() {
           
         </form>
       </div>
+
+      {/* Full Screen Camera Modal */}
+      {isCameraActive && (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col justify-center items-center">
+           <video ref={videoRef} autoPlay playsInline className="w-full h-full max-h-screen object-cover" />
+           <canvas ref={canvasRef} className="hidden" />
+           
+           {/* Header / Mode Indicator */}
+           <div className="absolute top-0 inset-x-0 p-6 flex justify-center bg-gradient-to-b from-black/60 to-transparent">
+             {isAiMode && (
+               <div className="bg-purple-600 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-2xl backdrop-blur flex items-center border border-purple-400">
+                 <Sparkles size={16} className="mr-2" /> AI Camera Mode
+               </div>
+             )}
+           </div>
+
+           {/* Controls Container */}
+           <div className="absolute bottom-0 inset-x-0 p-8 flex flex-col items-center justify-end bg-gradient-to-t from-black/80 to-transparent pb-12">
+              <div className="relative w-full max-w-sm flex justify-center items-center">
+                <button 
+                  type="button" 
+                  onClick={capturePhoto} 
+                  className="w-20 h-20 bg-white rounded-full border-4 border-slate-300 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-transform"
+                ></button>
+                <button 
+                  type="button" 
+                  onClick={stopCamera} 
+                  className="absolute right-0 bg-red-600 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-lg hover:bg-red-500 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p className="text-white/60 text-xs mt-6 font-medium tracking-wide uppercase">
+                Align subject and tap to capture
+              </p>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

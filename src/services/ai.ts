@@ -1,7 +1,7 @@
 // src/services/ai.ts
 
-const GEMINI_API_KEY = "AIzaSyA6ng7XO8MjAxFvS1ytNR-VzWMjWB6tzRw";
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_KEY = "AIzaSyAzM4gI9GlkDFzr1DSruNLH4c7g1ZY_Hy4";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface AiAnalysisResult {
   title: string;
@@ -49,6 +49,9 @@ Return your response as a valid JSON object with EXACTLY these three keys:
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('RATE_LIMIT_EXCEEDED');
+      }
       throw new Error(`Gemini API failed with status ${response.status}`);
     }
 
