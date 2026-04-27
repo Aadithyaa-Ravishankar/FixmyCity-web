@@ -70,8 +70,14 @@ export default function VerifyOTP() {
 
     setIsLoading(true);
     try {
-      await verifyOTP(email, otpCode, isCustom);
+      const res = await verifyOTP(email, otpCode, isCustom);
       toast.success('Successfully verified!');
+      
+      if (isCustom && res.user) {
+        const mockSession = { user: { id: res.user, email: email } };
+        localStorage.setItem('fixmycity_custom_auth', JSON.stringify({ session: mockSession, user: mockSession.user }));
+      }
+      
       // Force refresh session state in context
       await refreshSession();
       navigate('/home');

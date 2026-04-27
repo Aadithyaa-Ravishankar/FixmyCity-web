@@ -26,8 +26,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      if (session) {
+        setSession(session);
+        setUser(session.user);
+      } else {
+        // Fallback for custom OTP
+        const customAuth = localStorage.getItem('fixmycity_custom_auth');
+        if (customAuth) {
+          try {
+            const parsed = JSON.parse(customAuth);
+            setSession(parsed.session as any);
+            setUser(parsed.user as any);
+          } catch (e) {}
+        }
+      }
       setIsLoading(false);
     });
 
@@ -43,17 +55,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
-    setIsLoading(true);
-    await supabase.auth.signOut();
-    setIsLoading(false);
-  };
-
   const refreshSession = async () => {
     setIsLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
-    setSession(session);
-    setUser(session?.user ?? null);
+    if (session) {
+      setSession(session);
+      setUser(session.user);
+    } else {
+      const customAuth = localStorage.getItem('fixmycity_custom_auth');
+      if (customAuth) {
+        try {
+          const parsed = JSON.parse(customAuth);
+          setSession(parsed.session as any);
+          setUser(parsed.user as any);
+        } catch (e) {}
+      } else {
+        setSession(null);
+        setUser(null);
+      }
+    }
+    setIsLoading(false);
+  };
+
+  const signOut = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    localStorage.removeItem('fixmycity_custom_auth');
+    setSession(null);
+    setUser(null);
     setIsLoading(false);
   };
 

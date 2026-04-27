@@ -3,8 +3,9 @@ import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentLocation, getAddressFromCoordinates, Position, getCachedLocation } from '../services/location';
+import { analyzeImageWithGemini } from '../services/ai';
 import { toast } from 'react-hot-toast';
-import { MapPin, Image as ImageIcon, Video, Camera, ArrowLeft, Send, CheckCircle } from 'lucide-react';
+import { MapPin, Image as ImageIcon, Video, Camera, ArrowLeft, Send, CheckCircle, Sparkles } from 'lucide-react';
 
 const CATEGORIES = [
   'Road & Infrastructure',
@@ -33,6 +34,9 @@ export default function ReportIssue() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,9 +86,17 @@ export default function ReportIssue() {
       videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
+    if (!isAnalyzing) {
+       setIsAiMode(false);
+    }
   };
 
-  const capturePhoto = () => {
+  const startAiMode = () => {
+    setIsAiMode(true);
+    startCamera();
+  };
+
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -104,6 +116,27 @@ export default function ReportIssue() {
         }, 'image/jpeg', 0.8);
         
         stopCamera();
+
+        if (isAiMode) {
+          setIsAnalyzing(true);
+          // Async analysis without blocking the UI capture phase
+          analyzeImageWithGemini(dataUrl).then((aiData) => {
+            setTitle(aiData.title);
+            setDescription(aiData.description);
+            if (CATEGORIES.includes(aiData.category)) {
+              setCategory(aiData.category);
+            } else {
+              setCategory('Other');
+            }
+            toast.success('AI Auto-Fill Complete! ✨');
+          }).catch((err) => {
+            console.error(err);
+            toast.error('AI Analysis failed. Please fill manually.');
+          }).finally(() => {
+            setIsAnalyzing(false);
+            setIsAiMode(false);
+          });
+        }
       }
     }
   };
@@ -244,8 +277,12 @@ export default function ReportIssue() {
           </div>
 
           <div className="flex justify-center">
-             <button type="button" className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 rounded-lg shadow-md hover:shadow-lg transition-all flex justify-center items-center">
-               <span className="mr-2">✨</span> Make complaint with AI
+             <button 
+               type="button" 
+               onClick={startAiMode}
+               className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 rounded-lg shadow-md hover:shadow-lg transition-all flex justify-center items-center"
+             >
+               <Sparkles size={16} className="mr-2" /> Make complaint with AI
              </button>
           </div>
 
@@ -298,21 +335,34 @@ export default function ReportIssue() {
             
             {mediaPreview ? (
               <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 h-[300px] flex justify-center group">
-                 <img src={mediaPreview} alt="Evidence Artifact" className="w-full h-full object-contain" />
-                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={() => { setMediaFile(null); setMediaPreview(null); }}
-                      className="bg-white shadow-sm border border-slate-200 text-red-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-red-50 transition-colors"
-                    >
-                      Remove Photo
-                    </button>
-                 </div>
+                 <img src={mediaPreview} alt="Evidence Artifact" className={`w-full h-full object-contain ${isAnalyzing ? 'opacity-30' : 'opacity-100'} transition-opacity`} />
+                 
+                 {isAnalyzing ? (
+                   <div className="absolute inset-0 flex flex-col items-center justify-center">
+                     <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-3"></div>
+                     <p className="text-purple-700 font-bold text-sm bg-purple-50 px-3 py-1 rounded-full shadow-sm">AI is analyzing image...</p>
+                   </div>
+                 ) : (
+                   <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => { setMediaFile(null); setMediaPreview(null); }}
+                        className="bg-white shadow-sm border border-slate-200 text-red-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-red-50 transition-colors"
+                      >
+                        Remove Photo
+                      </button>
+                   </div>
+                 )}
               </div>
             ) : isCameraActive ? (
               <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-black h-[300px] flex justify-center group flex-col items-center">
                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                  <canvas ref={canvasRef} className="hidden" />
+                 {isAiMode && (
+                   <div className="absolute top-4 bg-purple-600/90 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg backdrop-blur flex items-center">
+                     <Sparkles size={14} className="mr-1.5" /> AI Camera Mode
+                   </div>
+                 )}
                  <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-4">
                     <button type="button" onClick={capturePhoto} className="w-14 h-14 bg-white rounded-full border-4 border-slate-300 shadow-lg hover:scale-105 transition-transform"></button>
                     <button type="button" onClick={stopCamera} className="absolute right-4 bottom-3 bg-red-600/80 text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-sm hover:bg-red-600 transition-colors">Cancel</button>

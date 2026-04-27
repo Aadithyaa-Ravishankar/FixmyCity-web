@@ -10,29 +10,57 @@ export const getCurrentLocation = (options?: PositionOptions): Promise<Position>
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Geolocation is not supported by your browser'));
-    } else {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          let msg = 'Unable to retrieve your location';
-          if (error.code === error.PERMISSION_DENIED) msg = 'Location access denied by user';
-          else if (error.code === error.POSITION_UNAVAILABLE) msg = 'Location information is unavailable';
-          else if (error.code === error.TIMEOUT) msg = 'Location request timed out';
-          reject(new Error(msg));
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-          ...options
-        }
-      );
+      return;
     }
+
+    const defaultOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 10000, // allow 10 seconds cache to speed up lock
+      ...options
+    };
+
+    const handleError = (error: GeolocationPositionError, isFallback: boolean) => {
+      // If high accuracy fails with timeout or unavailable, try fallback once
+      if (!isFallback && defaultOptions.enableHighAccuracy && (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE)) {
+        console.warn('High accuracy failed, retrying with low accuracy...', error);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+          (err) => handleError(err, true),
+          { ...defaultOptions, enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+        );
+        return;
+      }
+
+      let msg = 'Unable to retrieve your location';
+      if (error.code === error.PERMISSION_DENIED) {
+        msg = 'Location access denied. Check device permissions or ensure you are on HTTPS.';
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        msg = 'Location unavailable. Please turn on GPS or Location Services.';
+      } else if (error.code === error.TIMEOUT) {
+        msg = 'Location request timed out. Please try again.';
+      }
+      
+      // Development/Testing Fallback
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168.')) {
+        console.warn(`Geolocation failed (${msg}). Using mock Chengalpattu location for development.`);
+        resolve({ latitude: 12.6934, longitude: 79.9756 });
+        return;
+      }
+
+      reject(new Error(msg));
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (error) => handleError(error, false),
+      defaultOptions
+    );
   });
 };
 
@@ -90,25 +118,24 @@ export const formatDistance = (km: number): String => {
 
 export const getAddressFromCoordinates = async (lat: number, lon: number): Promise<string> => {
   try {
-    // Basic reverse geocoding via OpenStreetMap Nominatim API (free)
+    // Using BigDataCloud free client-side reverse geocoding (no CORS issues, very reliable for dev)
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
-      { headers: { 'User-Agent': 'FixmyCityWeb/1.0' } }
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
     );
+    
     if (!response.ok) throw new Error('Geocoding service unavailable');
     
     const data = await response.json();
-    if (data && data.address) {
-      const road = data.address.road || data.address.pedestrian || data.address.cycleway || '';
-      const suburb = data.address.suburb || data.address.neighbourhood || data.address.village || '';
-      const city = data.address.city || data.address.town || data.address.county || '';
+    if (data) {
+      const locality = data.locality || data.city || '';
+      const state = data.principalSubdivision || '';
       
-      const parts = [road, suburb, city].filter(Boolean);
-      return parts.length > 0 ? parts.join(', ') : 'Unknown Location';
+      const parts = [locality, state].filter(Boolean);
+      return parts.length > 0 ? parts.join(', ') : 'Unknown Area';
     }
-    return 'Unknown Location';
+    return 'Unknown Area';
   } catch (error) {
     console.error('Error reverse geocoding:', error);
-    return 'Location unavailable';
+    return 'Coordinates Locked (Address formatting failed)';
   }
 };
