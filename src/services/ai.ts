@@ -4,7 +4,6 @@ const GEMINI_API_KEY = "AIzaSyAzM4gI9GlkDFzr1DSruNLH4c7g1ZY_Hy4";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface AiAnalysisResult {
-  title: string;
   description: string;
   category: string;
 }
@@ -21,10 +20,9 @@ export const analyzeImageWithGemini = async (base64DataUri: string): Promise<AiA
             {
               text: `You are a civic infrastructure analysis AI. Analyze this image and identify the civic issue present (e.g., pothole, broken pipe, trash pile). 
               
-Return your response as a valid JSON object with EXACTLY these three keys:
-1. "title": A short, descriptive title (max 60 chars).
-2. "description": A detailed description of the problem seen in the image.
-3. "category": You MUST choose EXACTLY one of the following strings (do not invent new ones): 'Road & Infrastructure', 'Garbage & Waste', 'Water & Sewage', 'Electricity & Lighting', 'Public Transport', 'Parks & Recreation', 'Other'.`
+Return your response as a valid JSON object with EXACTLY these two keys:
+1. "description": A detailed description of the problem seen in the image.
+2. "category": You MUST choose EXACTLY one of the following strings (do not invent new ones): 'Road & Infrastructure', 'Garbage & Waste', 'Water & Sewage', 'Electricity & Lighting', 'Public Transport', 'Parks & Recreation', 'Other'.`
             },
             {
               inline_data: {
@@ -64,7 +62,6 @@ Return your response as a valid JSON object with EXACTLY these three keys:
 
     const parsed = JSON.parse(textResponse);
     return {
-      title: parsed.title || '',
       description: parsed.description || '',
       category: parsed.category || 'Other'
     };

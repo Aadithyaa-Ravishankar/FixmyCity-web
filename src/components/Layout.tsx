@@ -17,7 +17,7 @@ export default function Layout() {
     const fetchUpdates = async () => {
       const { data } = await supabase
         .from('complaints')
-        .select('complaint_id, title, complaint_status, created_at')
+        .select('complaint_id, category, complaint_status, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(3);
@@ -120,7 +120,7 @@ export default function Layout() {
                    ) : (
                      recentUpdates.map(update => (
                        <div key={update.complaint_id} className="p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer" onClick={() => { setShowNotifications(false); navigate('/track'); }}>
-                         <p className="text-xs font-semibold text-slate-900 line-clamp-1">{update.title}</p>
+                         <p className="text-xs font-semibold text-slate-900 line-clamp-1">{update.category}</p>
                          <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-wider">{update.complaint_status.replace('_', ' ')}</p>
                        </div>
                      ))
@@ -160,7 +160,7 @@ export default function Layout() {
                    ) : (
                      recentUpdates.map(update => (
                        <div key={update.complaint_id} className="p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer" onClick={() => { setShowNotifications(false); navigate('/track'); }}>
-                         <p className="text-xs font-semibold text-slate-900 line-clamp-1">{update.title}</p>
+                         <p className="text-xs font-semibold text-slate-900 line-clamp-1">{update.category}</p>
                          <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-wider">{update.complaint_status.replace('_', ' ')}</p>
                        </div>
                      ))

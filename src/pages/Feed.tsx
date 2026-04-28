@@ -121,7 +121,7 @@ export default function Feed() {
 
     if (searchQuery.trim() !== '') {
       filtered = filtered.filter(c => 
-        (c.title && c.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (c.category && c.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }

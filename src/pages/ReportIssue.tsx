@@ -21,7 +21,6 @@ export default function ReportIssue() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   
@@ -127,7 +126,6 @@ export default function ReportIssue() {
           setIsAnalyzing(true);
           // Async analysis without blocking the UI capture phase
           analyzeImageWithGemini(dataUrl).then((aiData) => {
-            setTitle(aiData.title);
             setDescription(aiData.description);
             if (CATEGORIES.includes(aiData.category)) {
               setCategory(aiData.category);
@@ -154,26 +152,29 @@ export default function ReportIssue() {
   const uploadMedia = async (file: File) => {
     if (!user) throw new Error('Authentication required');
     
+    const isVideo = file.type.startsWith('video/');
+    const bucketName = isVideo ? 'Videos' : 'Images';
+    
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}_${Date.now()}.${fileExt}`;
     const filePath = `reports/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('complaints')
+      .from(bucketName)
       .upload(filePath, file);
 
     if (uploadError) {
-      throw new Error('Storage transmission failed.');
+      console.error("Supabase Storage Error:", uploadError);
+      throw new Error(`Storage transmission failed: ${uploadError.message}`);
     }
 
-    const { data } = supabase.storage.from('complaints').getPublicUrl(filePath);
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
     return data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title) return toast.error('A title is required for the log.');
     if (!description) return toast.error('Please provide a descriptive log.');
     if (!position) return toast.error('Geolocation data is required.');
     if (!user) return toast.error('Session expired. Please re-authenticate.');
@@ -195,7 +196,6 @@ export default function ReportIssue() {
 
       const { error } = await supabase.from('complaints').insert({
         user_id: user.id,
-        title,
         description,
         category,
         location_lat: position.latitude,
@@ -313,17 +313,6 @@ export default function ReportIssue() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Hazardous pothole forming on intersection"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 text-sm placeholder-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                />
-              </div>
-
-              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
                 <textarea
                   value={description}
@@ -388,7 +377,7 @@ export default function ReportIssue() {
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isSubmitting || !position || !title || !description}
+              disabled={isSubmitting || !position || !description}
               className="w-full h-14 bg-slate-900 border border-slate-800 text-white font-bold rounded-xl shadow-sm hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center text-sm tracking-wide"
             >
               {isSubmitting ? (

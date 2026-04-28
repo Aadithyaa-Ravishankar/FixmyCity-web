@@ -75,7 +75,7 @@ export default function TrackStatus() {
       >
         <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-4">
           <div className="flex-1 pr-4">
-            <h3 className="text-lg font-bold text-slate-900">{complaint.title}</h3>
+            <h3 className="text-lg font-bold text-slate-900">{complaint.category}</h3>
             <p className="text-xs text-slate-500 mt-1">
               Reported on {new Date(complaint.created_at).toLocaleDateString()}
             </p>

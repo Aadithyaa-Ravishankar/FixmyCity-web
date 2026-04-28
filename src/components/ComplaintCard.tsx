@@ -10,7 +10,7 @@ interface Complaint {
   complaint_id: string;
   user_id: string;
   user_name?: string;
-  title: string;
+
   description: string;
   category: string;
   location_lat?: number;
@@ -222,7 +222,7 @@ export default function ComplaintCard({ complaint, distance }: { complaint: Comp
       </div>
 
       <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug">{complaint.title}</h3>
+        <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug">{complaint.category}</h3>
         <p className="text-slate-700 text-sm leading-relaxed">{complaint.description || 'No description provided.'}</p>
       </div>
       
